@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Treino Calistenia</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2c3e50">
+    <style>
+        :root {
+            --primary: #2980b9;
+            --bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text: #333333;
+            --text-light: #7f8c8d;
+            --border: #e0e0e0;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body { background-color: var(--bg); color: var(--text); padding-bottom: 80px; }
+        header { background-color: #2c3e50; color: white; padding: 20px; text-align: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1 { font-size: 1.5rem; }
+        
+        .nav-days { display: flex; overflow-x: auto; background: white; border-bottom: 1px solid var(--border); }
+        .nav-days button { flex: 0 0 auto; padding: 15px 20px; border: none; background: none; font-weight: 600; color: var(--text-light); border-bottom: 3px solid transparent; cursor: pointer; transition: 0.3s; }
+        .nav-days button.active { color: var(--primary); border-bottom: 3px solid var(--primary); }
+        
+        .container { padding: 15px; max-width: 600px; margin: 0 auto; }
+        .exercise-card { background: var(--card-bg); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border-left: 5px solid var(--primary); transition: opacity 0.3s; }
+        .exercise-card.done { opacity: 0.6; border-left-color: #27ae60; }
+        
+        .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .card-title { font-weight: bold; font-size: 1.1rem; }
+        .card-target { font-size: 0.85rem; color: var(--primary); background: #ebf5fb; padding: 4px 8px; border-radius: 4px; }
+        
+        .input-group { margin-bottom: 10px; display: flex; flex-direction: column; }
+        .input-group label { font-size: 0.8rem; color: var(--text-light); margin-bottom: 4px; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: var(--bg); }
+        textarea { resize: vertical; min-height: 60px; }
+        
+        .row { display: flex; gap: 10px; }
+        .row > div { flex: 1; }
+        
+        .actions { display: flex; align-items: center; justify-content: flex-end; margin-top: 10px; }
+        .checkbox-container { display: flex; align-items: center; gap: 8px; font-weight: bold; color: #27ae60; cursor: pointer;}
+        input[type="checkbox"] { width: 22px; height: 22px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Meu Treino</h1>
+</header>
+
+<nav class="nav-days" id="navDays"></nav>
+
+<div class="container" id="workoutContainer">
+    </div>
+
+<script>
+    // Registro do Service Worker para funcionar offline
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js');
+    }
+
+    const defaultData = {
+        segunda: [
+            { id: 'seg1', name: 'Flexões nas Argolas', target: '4x 8-12', reps: '', band: '', note: '', done: false },
+            { id: 'seg2', name: 'Dips (Mergulho)', target: '3x Até a falha', reps: '', band: '', note: '', done: false },
+            { id: 'seg3', name: 'Flexão Pike', target: '3x 8-10', reps: '', band: '', note: '', done: false },
+            { id: 'seg4', name: 'Extensão Tríceps', target: '3x 12-15', reps: '', band: '', note: '', done: false },
+            { id: 'seg5', name: 'Prancha + Hollow Body', target: '3x Isometria', reps: '', band: '', note: '', done: false }
+        ],
+        terca: [
+            { id: 'ter1', name: 'Pull-ups', target: '4x Quase falha', reps: '', band: '', note: '', done: false },
+            { id: 'ter2', name: 'Chin-ups', target: '3x 5-8', reps: '', band: '', note: '', done: false },
+            { id: 'ter3', name: 'Remada Australiana', target: '4x 10-12', reps: '', band: '', note: '', done: false },
+            { id: 'ter4', name: 'Rosca Bíceps (Band)', target: '3x 12-15', reps: '', band: '', note: '', done: false }
+        ],
+        quarta: [
+            { id: 'qua1', name: 'Cadeira Isométrica', target: '4x 45-60s', reps: '', band: '', note: '', done: false },
+            { id: 'qua2', name: 'Stiff c/ Band', target: '4x 12-15', reps: '', band: '', note: '', done: false },
+            { id: 'qua3', name: 'Elevação Pélvica', target: '4x 15', reps: '', band: '', note: '', done: false },
+            { id: 'qua4', name: 'Caminhada Lateral', target: '3x 15 cada lado', reps: '', band: '', note: '', done: false },
+            { id: 'qua5', name: 'Elevação de Joelhos', target: '3x 10-15', reps: '', band: '', note: '', done: false }
+        ],
+        quinta: [
+            { id: 'qui1', name: 'Cardio Z2 (Pedal/Caminhada)', target: '45-60 min', reps: '', band: '', note: '', done: false },
+            { id: 'qui2', name: 'Alongamento Inferiores', target: 'Livre', reps: '', band: '', note: '', done: false }
+        ],
+        sexta: [
+            { id: 'sex1', name: 'Flexões Declinadas', target: '3x 15-20', reps: '', band: '', note: '', done: false },
+            { id: 'sex2', name: 'Pull-ups Explosivas', target: '3x 10', reps: '', band: '', note: '', done: false },
+            { id: 'sex3', name: 'Crucifixo Invertido', target: '3x 15', reps: '', band: '', note: '', done: false },
+            { id: 'sex4', name: 'Prancha c/ Band', target: '3x 45-60s', reps: '', band: '', note: '', done: false }
+        ],
+        sabado: [
+            { id: 'sab1', name: 'Agachamento Búlgaro Assist.', target: '3x 10 cada', reps: '', band: '', note: '', done: false },
+            { id: 'sab2', name: 'Flexão Nórdica Reversa', target: '3x 8-10', reps: '', band: '', note: '', done: false },
+            { id: 'sab3', name: 'Panturrilhas Unilaterais', target: '4x 15-20', reps: '', band: '', note: '', done: false },
+            { id: 'sab4', name: 'L-Sit Tuck', target: '4x Isometria', reps: '', band: '', note: '', done: false }
+        ],
+        domingo: [
+            { id: 'dom1', name: 'Descanso Ativo (Opcional)', target: 'Z2 muito leve', reps: '', band: '', note: '', done: false }
+        ]
+    };
+
+    let workoutData = JSON.parse(localStorage.getItem('calisteniaTracker')) || defaultData;
+    let currentDay = 'segunda';
+
+    const days = ['segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado', 'domingo'];
+    const daysNames = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+    const bandOptions = ['Nenhuma', 'MB - Leve', 'MB - Média', 'MB - Forte', 'SB - Leve', 'SB - Média', 'SB - Forte'];
+
+    function init() {
+        // Encontrar o dia atual da semana
+        const today = new Date().getDay(); // 0 é domingo, 1 é segunda
+        currentDay = today === 0 ? 'domingo' : days[today - 1];
+        
+        renderNav();
+        renderWorkout(currentDay);
+    }
+
+    function renderNav() {
+        const nav = document.getElementById('navDays');
+        nav.innerHTML = '';
+        days.forEach((day, index) => {
+            const btn = document.createElement('button');
+            btn.innerText = daysNames[index];
+            btn.className = day === currentDay ? 'active' : '';
+            btn.onclick = () => {
+                currentDay = day;
+                renderNav();
+                renderWorkout(day);
+            };
+            nav.appendChild(btn);
+        });
+        // Scrollar menu para o dia ativo
+        const activeBtn = nav.querySelector('.active');
+        if(activeBtn) activeBtn.scrollIntoView({ inline: 'center', behavior: 'smooth' });
+    }
+
+    function renderWorkout(day) {
+        const container = document.getElementById('workoutContainer');
+        container.innerHTML = '';
+
+        workoutData[day].forEach((ex, index) => {
+            const card = document.createElement('div');
+            card.className = `exercise-card ${ex.done ? 'done' : ''}`;
+            
+            // Gerar opções do Select
+            let selectOptions = bandOptions.map(opt => 
+                `<option value="${opt}" ${ex.band === opt ? 'selected' : ''}>${opt}</option>`
+            ).join('');
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <div class="card-title">${ex.name}</div>
+                    <div class="card-target">${ex.target}</div>
+                </div>
+                
+                <div class="row">
+                    <div class="input-group">
+                        <label>Séries / Reps feitas</label>
+                        <input type="text" placeholder="Ex: 4x 10,8,8,7" value="${ex.reps}" onchange="updateData('${day}', ${index}, 'reps', this.value)">
+                    </div>
+                    <div class="input-group">
+                        <label>Elástico Utilizado</label>
+                        <select onchange="updateData('${day}', ${index}, 'band', this.value)">
+                            ${selectOptions}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label>Observações (Carga, dificuldade, etc)</label>
+                    <textarea placeholder="Como foi o exercício?" onchange="updateData('${day}', ${index}, 'note', this.value)">${ex.note}</textarea>
+                </div>
+
+                <div class="actions">
+                    <label class="checkbox-container">
+                        Feito
+                        <input type="checkbox" ${ex.done ? 'checked' : ''} onchange="updateData('${day}', ${index}, 'done', this.checked); renderWorkout('${day}')">
+                    </label>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function updateData(day, index, field, value) {
+        workoutData[day][index][field] = value;
+        localStorage.setItem('calisteniaTracker', JSON.stringify(workoutData));
+    }
+
+    init();
+</script>
+
+</body>
+</html>
